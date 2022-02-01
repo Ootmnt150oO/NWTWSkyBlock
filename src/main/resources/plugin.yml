@@ -1,0 +1,5 @@
+name: NWTWSkyBlock
+version: 1.0
+author: yuziouo
+main: NWTW.Skyblocks.Loader
+api: [1.0.8]
