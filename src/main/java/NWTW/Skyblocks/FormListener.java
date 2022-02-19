@@ -9,8 +9,10 @@ import cn.nukkit.form.element.ElementButton;
 import cn.nukkit.form.response.FormResponseSimple;
 import cn.nukkit.form.window.FormWindowSimple;
 import cn.nukkit.utils.TextFormat;
+import org.iq80.leveldb.util.FileUtils;
 
 import java.io.File;
+import java.util.Arrays;
 
 public class FormListener implements Listener {
     public static int memberle = -21315;
@@ -26,11 +28,13 @@ public class FormListener implements Listener {
         FormWindowSimple simple = new FormWindowSimple("島嶼系統", TextFormat.RED+"請特別注意!\n請問你是否要退出當前的島嶼此步驟無法挽回");
         simple.addButton(new ElementButton("我已經非常確認了"));
         simple.addButton(new ElementButton("拜託讓我在想想一下吧"));
-        player.showFormWindow(simple,memberle);
+        player.showFormWindow(simple,ownerle);
     }
-    public static void inviteM(Player player){
+    public static void inviteM(Player player,Player send){
         FormWindowSimple simple = new FormWindowSimple("島嶼系統","");
-        simple.addButton(new ElementButton("我要加入島嶼並與他一起生活:"+player.getName()));
+        simple.addButton(new ElementButton("我要加入島嶼並與他一起生活:"+send.getName()));
+        simple.addButton(new ElementButton("我拒絕我才不要跟他再一起生活哩"));
+        player.showFormWindow(simple,inv);
     }
     @EventHandler
     public void onFormResponse(PlayerFormRespondedEvent event) {
@@ -43,6 +47,17 @@ public class FormListener implements Listener {
             //分类别讨论
             if (clickedButtonId == 0) {
                 Land land = Loader.getInstance().Player2Land(player);
+                for (String s:land.getMember()){
+                    Player player1 = Server.getInstance().getPlayer(s);
+                    if (player1!=null){
+                        if (player1.getName().equals(player.getName())) continue;
+                        player1.sendMessage(event.getPlayer().getName()+"退出了我們的大家族");
+                    }
+                }
+                Player player1 = Server.getInstance().getPlayer(land.getOwner());
+                if (player1!=null){
+                    player1.sendMessage(player.getName()+"已經退出了你的島嶼");
+                }
                 land.getMember().remove(player.getName());
                 player.sendMessage("你已經成功退出了島嶼");
             }
@@ -53,12 +68,19 @@ public class FormListener implements Listener {
             //分类别讨论
             if (clickedButtonId == 0) {
                 Land land = Loader.getInstance().Player2Land(player);
-                File file = new File(Server.getInstance().getDataPath() + "worlds/"+land.getLevel());
-                    Server.getInstance().unloadLevel(Server.getInstance().getLevelByName(land.getLevel()));
+                Server.getInstance().getLevelByName(player.getUniqueId().toString()).unload();
+                File regionfolder = new File(String.valueOf(Server.getInstance().getDataPath()) + "worlds/" + player.getUniqueId().toString() + "/region");
+                File worldfolder = new File(String.valueOf(Server.getInstance().getDataPath()) + "worlds/" + player.getUniqueId().toString());
+                FileUtils.deleteDirectoryContents(regionfolder);
+                FileUtils.deleteDirectoryContents(worldfolder);
+                worldfolder.delete();
+                player.sendMessage("已經幫你傳送回大廳");
                     Loader.getInstance().dataBase.delLand(player);
+                    player.teleport(Server.getInstance().getDefaultLevel().getSpawnLocation());
                     Loader.getInstance().getLands().remove(land);
-                    file.delete();
+                    Loader.getInstance().getConfigs().remove(player.getName());
                 player.sendMessage("島嶼刪除成功");
+
             }
         }
         if (id == inv){
@@ -70,6 +92,16 @@ public class FormListener implements Listener {
                 Land land = Loader.getInstance().PN2Land(pl[1]);
                 land.getMember().add(event.getPlayer().getName());
                 player.sendMessage("你已成成功加入了新的島嶼");
+                for (String s:land.getMember()){
+                    Player player1 = Server.getInstance().getPlayer(s);
+                    if (player1!=null){
+                        player1.sendMessage("歡迎"+event.getPlayer().getName()+"加入了我們的大家族");
+                    }
+                }
+                Player player1 = Server.getInstance().getPlayer(land.getOwner());
+                if (player1!=null){
+                    player1.sendMessage(player.getName()+"已經成功加入了你的島嶼");
+                }
             }
         }
     }

@@ -81,7 +81,8 @@ public class DataBase {
 
     public void loadLand(String owners) {
         try {
-            ResultSet result = c.createStatement().executeQuery("SELECT member, tpzone, locker, size FROM skyblocks WHERE owner = '" + owners + "'");
+//            ResultSet result = c.createStatement().executeQuery("SELECT member, tpzone, locker, size FROM skyblocks WHERE owner = '" + owners + "'");
+            ResultSet result = c.createStatement().executeQuery("SELECT * FROM skyblocks");
             if (result.next()) {
                 Land land = new Land();
                 String mem = result.getString("member");
@@ -115,7 +116,43 @@ public class DataBase {
             e.printStackTrace();
         }
     }
-
+    public void loadLand() {
+        try {
+//            ResultSet result = c.createStatement().executeQuery("SELECT member, tpzone, locker, size FROM skyblocks WHERE owner = '" + owners + "'");
+            ResultSet result = this.c.createStatement().executeQuery("SELECT * FROM skyblocks");
+            while (result.next()) {
+                Land land = new Land();
+                String mem = result.getString("member");
+                String[] members = null;
+                if (!mem.equals("")) {
+                    String member = mem.substring(0, mem.length() - 1);
+                    members = member.split("~");
+                }
+                String[] zone = result.getString("tpzone").split("~");
+                boolean b = int2bool(result.getInt("locker"));
+                int size = result.getInt("size");
+                land.setLevel(Server.getInstance().getOfflinePlayer(result.getString("owner")).getUniqueId().toString());
+                land.setOwner(result.getString("owner"));
+                ArrayList<String> list;
+                if (members != null) {
+                    list = new ArrayList<>(Arrays.asList(members));
+                } else {
+                    list = new ArrayList<>();
+                }
+                land.setMember(list);
+                land.setTpZone(new Position().add(Double.parseDouble(zone[0]), Double.parseDouble(zone[1]), Double.parseDouble(zone[2])).setLevel(Server.getInstance().getLevelByName(land.getLevel())));
+                land.setSize(size);
+                land.setLock(b);
+                land.setCustomer(new ArrayList<>());
+                land.setSaveZone(new Vector3().add(land.getTpZone().getFloorX(), land.getTpZone().getFloorY(), land.getTpZone().getFloorZ()));
+                Loader.getInstance().addLand(land);
+                Server.getInstance().loadLevel(Server.getInstance().getOfflinePlayer(land.getOwner()).getUniqueId().toString());
+                Server.getInstance().getLogger().info("島主:" + land.getOwner() + "已經讀取完畢");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
     public void saveLand(Land land) {
         try {
             PreparedStatement preparedStatement = c.prepareStatement("UPDATE skyblocks SET member =?, tpzone = ?, size = ?,  locker = ? WHERE owner = ?");
@@ -140,7 +177,8 @@ public class DataBase {
     }
     public void delLand(Player player)  {
         try {
-            PreparedStatement preparedStatement = c.prepareStatement("DELETE FORM skyblocks WHERE owner = '" + player.getName() + "'");
+            PreparedStatement preparedStatement = c.prepareStatement("delete from skyblocks where owner = ?");
+            preparedStatement.setString(1,player.getName());
             preparedStatement.executeUpdate();
         }catch (SQLException e){
             e.printStackTrace();

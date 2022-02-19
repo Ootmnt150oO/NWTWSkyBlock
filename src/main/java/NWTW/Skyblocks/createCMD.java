@@ -4,20 +4,31 @@ import cn.nukkit.Player;
 import cn.nukkit.Server;
 import cn.nukkit.block.Block;
 import cn.nukkit.block.BlockID;
+import cn.nukkit.block.BlockSapling;
+import cn.nukkit.blockentity.BlockEntity;
+import cn.nukkit.blockentity.BlockEntityChest;
 import cn.nukkit.command.Command;
 import cn.nukkit.command.CommandSender;
-import cn.nukkit.form.window.FormWindowSimple;
+import cn.nukkit.item.Item;
 import cn.nukkit.level.Level;
+import cn.nukkit.level.Position;
+import cn.nukkit.level.format.generic.BaseFullChunk;
+import cn.nukkit.level.generator.object.tree.ObjectTree;
+import cn.nukkit.math.NukkitRandom;
 import cn.nukkit.math.Vector3;
+import cn.nukkit.nbt.tag.CompoundTag;
+import cn.nukkit.nbt.tag.ListTag;
 import cn.nukkit.scheduler.AsyncTask;
-import com.sun.org.apache.bcel.internal.generic.IF_ACMPEQ;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class createCMD extends Command {
 
     public createCMD() {
-        super("sk","空島指令");
+        super("sk", "空島指令");
     }
 
     @Override
@@ -35,14 +46,10 @@ public class createCMD extends Command {
                             Loader.getInstance().getServer().loadLevel(land.getLevel());
                             Level level = Server.getInstance().getLevelByName(land.getLevel());
                             level.setSpawnLocation(land.getTpZone());
-                            player.sendMessage(land.getLevel());
                             Loader.getInstance().getConfigs().set(player.getName(), player.getUniqueId().toString());
                             Loader.getInstance().getConfigs().save();
-                            for (int x = 127; x < 130; x++) {
-                                for (int z = 127; z < 130; z++) {
-                                    level.setBlock(new Vector3(x, 64, z), Block.get(BlockID.BEDROCK));
-                                }
-                            }
+                            createIsland(new Position(126,60,126,level));
+                            player.sendMessage("你的空島已經創建 開始你的快樂生活吧!");
                             player.teleport(land.getTpZone());
                             Server.getInstance().getScheduler().scheduleAsyncTask(Loader.getInstance(), new AsyncTask() {
                                 @Override
@@ -50,9 +57,9 @@ public class createCMD extends Command {
                                     Loader.getInstance().dataBase.createAccount(land);
                                 }
                             });
+                            level.setSpawnLocation(land.getSaveZone());
                         } else {
                             player.sendMessage("您已有自己的島嶼或已居住他人島嶼請打 /sk tp 傳送");
-                            player.teleport(Server.getInstance().getLevelByName(player.getUniqueId().toString()).getSpawnLocation());
                         }
                         return true;
                     case "tp":
@@ -151,11 +158,16 @@ public class createCMD extends Command {
                     case "tp":
                         if (Loader.getInstance().hasLand(target)) {
                             Land land = Loader.getInstance().PN2Land(target);
-                            if (!land.isLock()) {
+                            if (!player.isOp()) {
+                                if (!land.isLock()) {
+                                    player.teleport(land.getTpZone());
+                                    player.sendMessage("你已經傳送到了" + target + "所在的島嶼了");
+                                } else {
+                                    player.sendMessage(target + "所在的島嶼已經鎖住了");
+                                }
+                            } else {
                                 player.teleport(land.getTpZone());
                                 player.sendMessage("你已經傳送到了" + target + "所在的島嶼了");
-                            } else {
-                                player.sendMessage(target + "所在的島嶼已經鎖住了");
                             }
                         } else {
                             player.sendMessage("他目前沒有任何一塊島嶼喔");
@@ -175,39 +187,39 @@ public class createCMD extends Command {
                             if (!Loader.getInstance().isMember(Loader.getInstance().Player2Land(player), player)) {
                                 Player player1 = Server.getInstance().getPlayer(target);
                                 if (player1 != null) {
-                                    FormListener.inviteM(player1);
+                                    FormListener.inviteM(player1,player);
                                 } else {
                                     player.sendMessage(target + "找不到他");
                                 }
-                            }else {
+                            } else {
                                 player.sendMessage("只有島主才能使用");
                             }
-                        }else {
+                        } else {
                             player.sendMessage("請先打/sk create 創建島嶼");
                         }
                         return true;
                     case "kick":
-                        if (Loader.getInstance().hasLand(player)){
+                        if (Loader.getInstance().hasLand(player)) {
                             Land land = Loader.getInstance().Player2Land(player);
-                            if (!Loader.getInstance().isMember(land,player)){
-                                if (land.getMember().contains(target)){
+                            if (!Loader.getInstance().isMember(land, player)) {
+                                if (land.getMember().contains(target)) {
                                     land.getMember().remove(target);
-                                    player.sendMessage("你已經成功移除掉了"+target);
-                                }else {
+                                    player.sendMessage("你已經成功移除掉了" + target);
+                                } else {
                                     player.sendMessage("只有島主才能使用此指令");
                                 }
                             }
-                        }else {
+                        } else {
                             player.sendMessage("請先打/sk create 創建島嶼");
                         }
                         return true;
                     case "time":
-                        if (Loader.getInstance().hasLand(player)){
+                        if (Loader.getInstance().hasLand(player)) {
                             Land land = Loader.getInstance().Player2Land(player);
                             switch (target) {
                                 case "day":
-                                Server.getInstance().getLevelByName(land.getLevel()).setTime(Level.TIME_DAY);
-                                return true;
+                                    Server.getInstance().getLevelByName(land.getLevel()).setTime(Level.TIME_DAY);
+                                    return true;
                                 case "noon":
                                     Server.getInstance().getLevelByName(land.getLevel()).setTime(Level.TIME_NOON);
                                     return true;
@@ -220,5 +232,107 @@ public class createCMD extends Command {
             }
         }
         return false;
+    }
+    private void initChest(Level lvl, int x, int y, int z) {
+        BaseFullChunk chunk = lvl.getChunk(x >> 4, z >> 4);
+        lvl.setBlockIdAt(x, y, z, Block.CHEST);
+
+        while (!chunk.isLoaded()) {
+            try {
+                chunk.load(true);
+            } catch (IOException ex) {
+                ex.fillInStackTrace();
+            }
+        }
+
+        // Chunk is fully loaded, no need to rerun the task, when it fully
+        // loaded it will be loaded.
+        cn.nukkit.nbt.tag.CompoundTag nbt = new cn.nukkit.nbt.tag.CompoundTag()
+                .putList(new cn.nukkit.nbt.tag.ListTag<>("Items"))
+                .putString("id", BlockEntity.CHEST)
+                .putInt("x", x)
+                .putInt("y", y)
+                .putInt("z", z);
+
+        BlockEntityChest e = new BlockEntityChest(chunk, nbt);
+        lvl.addBlockEntity(e);
+        e.spawnToAll();
+            Map<Integer, Item> items = new HashMap<>();
+            items.put(0, Item.get(Item.ICE, 0, 2));
+            items.put(1, Item.get(Item.BUCKET, 10, 1));
+            items.put(2, Item.get(Item.BONE, 0, 2));
+            items.put(3, Item.get(Item.SUGARCANE, 0, 1));
+            items.put(4, Item.get(Item.RED_MUSHROOM, 0, 1));
+            items.put(5, Item.get(Item.BROWN_MUSHROOM, 0, 2));
+            items.put(6, Item.get(Item.PUMPKIN_SEEDS, 0, 2));
+            items.put(7, Item.get(Item.MELON, 0, 1));
+            items.put(8, Item.get(Item.SAPLING, 0, 1));
+            items.put(9, Item.get(Item.STRING, 0, 12));
+            items.put(10, Item.get(Item.POTATO, 0, 32));
+            items.put(11, Item.get(Item.CACTUS, 0, 1));
+            items.put(12,Item.get(Item.DIRT,0,16));
+            e.getInventory().setContents(items);
+    }
+    private void createIsland(Position pos) {
+        int groundHeight = pos.getFloorY();
+        int X = pos.getFloorX();
+        int Z = pos.getFloorZ();
+        Level world = pos.level;
+        // bedrock - ensures island are not overwritten
+        for (int x = X; x < X + 1; ++x) {
+            for (int z = Z; z < Z + 1; ++z) {
+                world.setBlockIdAt(x, groundHeight, z, Block.BEDROCK);
+            }
+        }
+        // Add some dirt and grass
+        for (int x = X - 1; x < X + 6; ++x) {
+            for (int z = X - 1; z < X + 2; ++z) {
+                world.setBlockIdAt(x, groundHeight + 1, z, Block.DIRT);
+                world.setBlockIdAt(x, groundHeight + 2, z, Block.DIRT);
+            }
+        }
+        for (int x = X - 2; x < X + 7; ++x) {
+            for (int z = Z - 2; z < Z + 3; ++z) {
+                world.setBlockIdAt(x, groundHeight + 3, z, Block.DIRT);
+                world.setBlockIdAt(x, groundHeight + 4, z, Block.DIRT);
+            }
+        }
+        for (int x = X - 3; x < X + 8; ++x) {
+            for (int z = Z - 3; z < Z + 4; ++z) {
+                world.setBlockIdAt(x, groundHeight + 5, z, Block.DIRT);
+                world.setBlockIdAt(x, groundHeight + 6, z, Block.GRASS);
+            }
+        }
+        // Then cut off the corners to make it round-ish
+        for (int x_space = X - 3; x_space <= X + 7; x_space += 6) {
+            for (int z_space = Z - 3; z_space <= Z + 3; z_space += 6) {
+                world.setBlockIdAt(x_space, groundHeight + 5, z_space, Block.AIR);
+                world.setBlockIdAt(x_space, groundHeight + 6, z_space, Block.AIR);
+            }
+        }
+
+        for (int x_space = X - 2; x_space <= X + 6; x_space += 4) {
+            for (int z_space = Z - 2; z_space <= Z + 2; z_space += 4) {
+                world.setBlockIdAt(x_space, groundHeight + 3, z_space, Block.AIR);
+            }
+
+        }
+
+        for (int x_space = X - 1; x_space <= X + 6; x_space += 2) {
+            for (int z_space = Z - 1; z_space <= Z + 1; z_space += 2) {
+                world.setBlockIdAt(x_space, groundHeight + 1, z_space, Block.AIR);
+            }
+        }
+        // Sand
+        world.setBlockIdAt(X, groundHeight + 1, Z, Block.SAND);
+        world.setBlockIdAt(X, groundHeight + 2, Z, Block.SAND);
+        world.setBlockIdAt(X, groundHeight + 3, Z, Block.SAND);
+        world.setBlockIdAt(X, groundHeight + 4, Z, Block.SAND);
+        world.setBlockIdAt(X, groundHeight + 5, Z, Block.SAND);
+
+        // Done making island base Joe! Now we place the sweets (Tree)
+        ObjectTree.growTree(world, X, groundHeight + 7, Z, new NukkitRandom(), BlockSapling.OAK);
+
+        initChest(world, X, groundHeight + 7, Z + 1);
     }
 }

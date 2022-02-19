@@ -1,6 +1,7 @@
 package NWTW.Skyblocks;
 
 import cn.nukkit.Player;
+import cn.nukkit.Server;
 import cn.nukkit.event.EventHandler;
 import cn.nukkit.event.EventPriority;
 import cn.nukkit.event.Listener;
@@ -9,6 +10,8 @@ import cn.nukkit.event.block.BlockPlaceEvent;
 import cn.nukkit.event.entity.EntityDamageByEntityEvent;
 import cn.nukkit.event.entity.EntityDamageEvent;
 import cn.nukkit.event.player.PlayerInteractEvent;
+import cn.nukkit.event.player.PlayerRespawnEvent;
+import cn.nukkit.event.server.DataPacketReceiveEvent;
 
 
 public class PlayerListener implements Listener {
@@ -55,6 +58,20 @@ public class PlayerListener implements Listener {
                 Player player = (Player) event.getEntity();
                 if (!Loader.getInstance().hasPer(player,player.getLevel()))event.setCancelled(true);
             }
+        }
+    }
+    @EventHandler
+    public void onRespawn(PlayerRespawnEvent event){
+        if (event.isFirstSpawn()) return;
+        Player player = event.getPlayer();
+        if (Loader.getInstance().hasLand(player)){
+            Land land = Loader.getInstance().Player2Land(player);
+            Server.getInstance().getScheduler().scheduleDelayedTask(Loader.getInstance(), new Runnable() {
+                @Override
+                public void run() {
+                    player.teleport(land.getTpZone());
+                }
+            },20);
         }
     }
 }

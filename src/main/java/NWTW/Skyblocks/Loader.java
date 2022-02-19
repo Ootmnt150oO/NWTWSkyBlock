@@ -11,6 +11,7 @@ import cn.nukkit.utils.Config;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class Loader extends PluginBase {
     private final ArrayList<Land> lands = new ArrayList<>();
@@ -54,8 +55,9 @@ public class Loader extends PluginBase {
         getServer().getScheduler().scheduleAsyncTask(this, new AsyncTask() {
             @Override
             public void onRun() {
-                for (String s:getConfigs().getKeys())
-                dataBase.loadLand(s);
+//                for (String s:getConfigs().getKeys())
+//                dataBase.loadLand(s);
+                dataBase.loadLand();
             }
         });
         super.onEnable();
@@ -102,12 +104,12 @@ public class Loader extends PluginBase {
         Land land = Level2Land(level);
         if (land == null) return true;
         if (land.getSaveZone().getFloorX() == block.getFloorX()&& land.getSaveZone().getFloorZ() == block.getFloorZ()) return false;
-        return land.getOwner().equals(player.getName()) || land.getCustomer().contains(player.getName()) || land.getMember().contains(player.getName());
+        return land.getOwner().equals(player.getName()) || land.getCustomer().contains(player.getName()) || land.getMember().contains(player.getName())||player.isOp();
     }
     public boolean hasPer(Player player, Level level){
         Land land = Level2Land(level);
         if (land == null) return true;
-        return land.getOwner().equals(player.getName()) || land.getCustomer().contains(player.getName()) || land.getMember().contains(player.getName());
+        return land.getOwner().equals(player.getName()) || land.getCustomer().contains(player.getName()) || land.getMember().contains(player.getName())||player.isOp();
     }
     public Land Player2Land(Player player){
         for (Land land:getLands()){
