@@ -3,7 +3,6 @@ package NWTW.Skyblocks;
 import cn.nukkit.Player;
 import cn.nukkit.Server;
 import cn.nukkit.block.Block;
-import cn.nukkit.block.BlockID;
 import cn.nukkit.block.BlockSapling;
 import cn.nukkit.blockentity.BlockEntity;
 import cn.nukkit.blockentity.BlockEntityChest;
@@ -16,8 +15,6 @@ import cn.nukkit.level.format.generic.BaseFullChunk;
 import cn.nukkit.level.generator.object.tree.ObjectTree;
 import cn.nukkit.math.NukkitRandom;
 import cn.nukkit.math.Vector3;
-import cn.nukkit.nbt.tag.CompoundTag;
-import cn.nukkit.nbt.tag.ListTag;
 import cn.nukkit.scheduler.AsyncTask;
 
 import java.io.IOException;
@@ -37,18 +34,16 @@ public class createCMD extends Command {
             Player player = (Player) commandSender;
             if (strings.length == 1) {
                 switch (strings[0]) {
-                    case "create":
+                    case "create" -> {
                         if (!Loader.getInstance().hasLand(player)) {
                             Loader.getInstance().getServer().generateLevel(player.getUniqueId().toString(), 99999999L, EmptyGenerator.class);
                             ArrayList<String> member = new ArrayList<>();
-                            Land land = new Land(player.getUniqueId().toString(), player.getName(), member, new Vector3(128, 64, 128), Server.getInstance().getLevelByName(player.getUniqueId().toString()).getSpawnLocation(), 0, false);
+                            Land land = new Land(player.getUniqueId().toString(), player.getName(), member, new Vector3(128, 70, 128), Server.getInstance().getLevelByName(player.getUniqueId().toString()).getSpawnLocation(), 1, false);
                             Loader.getInstance().getLands().add(land);
                             Loader.getInstance().getServer().loadLevel(land.getLevel());
                             Level level = Server.getInstance().getLevelByName(land.getLevel());
                             level.setSpawnLocation(land.getTpZone());
-                            Loader.getInstance().getConfigs().set(player.getName(), player.getUniqueId().toString());
-                            Loader.getInstance().getConfigs().save();
-                            createIsland(new Position(126,60,126,level));
+                            createIsland(new Position(126, 63, 126, level));
                             player.sendMessage("你的空島已經創建 開始你的快樂生活吧!");
                             player.teleport(land.getTpZone());
                             Server.getInstance().getScheduler().scheduleAsyncTask(Loader.getInstance(), new AsyncTask() {
@@ -62,7 +57,8 @@ public class createCMD extends Command {
                             player.sendMessage("您已有自己的島嶼或已居住他人島嶼請打 /sk tp 傳送");
                         }
                         return true;
-                    case "tp":
+                    }
+                    case "tp" -> {
                         if (Loader.getInstance().hasLand(player)) {
                             Land land = Loader.getInstance().Player2Land(player);
                             player.teleport(land.getTpZone());
@@ -70,7 +66,8 @@ public class createCMD extends Command {
                             player.sendMessage("請先打/sk create 創建島嶼");
                         }
                         return true;
-                    case "lock":
+                    }
+                    case "lock" -> {
                         if (Loader.getInstance().hasLand(player)) {
                             Land land = Loader.getInstance().Player2Land(player);
                             land.setLock(true);
@@ -79,7 +76,8 @@ public class createCMD extends Command {
                             player.sendMessage("請先打/sk create 創建島嶼");
                         }
                         return true;
-                    case "unlock":
+                    }
+                    case "unlock" -> {
                         if (Loader.getInstance().hasLand(player)) {
                             Land land = Loader.getInstance().Player2Land(player);
                             land.setLock(false);
@@ -88,7 +86,8 @@ public class createCMD extends Command {
                             player.sendMessage("請先打/sk create 創建島嶼");
                         }
                         return true;
-                    case "sp":
+                    }
+                    case "sp" -> {
                         if (Loader.getInstance().hasLand(player)) {
                             Land land = Loader.getInstance().Player2Land(player);
                             land.setTpZone(player.getLocation());
@@ -98,7 +97,8 @@ public class createCMD extends Command {
                             player.sendMessage("請先打/sk create 創建島嶼");
                         }
                         return true;
-                    case "list":
+                    }
+                    case "list" -> {
                         if (Loader.getInstance().hasLand(player)) {
                             Land land = Loader.getInstance().Player2Land(player);
                             player.sendMessage(land.getOwner() + "[島主]");
@@ -111,11 +111,13 @@ public class createCMD extends Command {
                             player.sendMessage("請先打/sk create 創建島嶼");
                         }
                         return true;
-                    case "help":
+                    }
+                    case "help" -> {
                         player.sendMessage("-/sk create >>> 創建島嶼\n" +
                                 "-/sk tp >>> 傳送居住空島\n" +
                                 "-/sk tp ID >>> 參觀別人的空島*ID 的大小寫要和本人 ID 一致*\n" +
                                 "-/sk lock >>> 鎖島 (島主指令)\n" +
+                                "-/sk upgrade >>> 升級島嶼 (島主指令)\n" +
                                 "-/sk unlock >>> 解除鎖島 (島主指令)\n" +
                                 "-/sk give ID >>> [小幫手]給予臨時編輯權限*ID 的大小寫要和本人 ID 一致*\n" +
                                 "-/sk sp >>> 設置島嶼出生點 (島主指令)\n" +
@@ -127,7 +129,8 @@ public class createCMD extends Command {
                                 "-/sk delete >>> 刪除島嶼 (島主指令)\n" +
                                 "-/sk list >>> 查看島嶼名單");
                         return true;
-                    case "Leave":
+                    }
+                    case "Leave" -> {
                         if (Loader.getInstance().hasLand(player)) {
                             Land land = Loader.getInstance().Player2Land(player);
                             if (Loader.getInstance().isMember(land, player)) {
@@ -139,7 +142,8 @@ public class createCMD extends Command {
                             player.sendMessage("請先打/sk create 創建島嶼");
                         }
                         return true;
-                    case "delete":
+                    }
+                    case "delete" -> {
                         if (Loader.getInstance().hasLand(player)) {
                             Land land = Loader.getInstance().Player2Land(player);
                             if (!Loader.getInstance().isMember(land, player)) {
@@ -151,6 +155,20 @@ public class createCMD extends Command {
                             player.sendMessage("請先打/sk create 創建島嶼");
                         }
                         return true;
+                    }
+                    case "upgrade" -> {
+                        if (Loader.getInstance().hasLand(player)) {
+                            Land land = Loader.getInstance().Player2Land(player);
+                            if (!Loader.getInstance().isMember(land, player)) {
+                                FormListener.UpgradeForm(player, land);
+                            } else {
+                                player.sendMessage("要升級島嶼請找島主喔");
+                            }
+                        } else {
+                            player.sendMessage("請先打/sk create 創建島嶼");
+                        }
+                        return true;
+                    }
                 }
             } else if (strings.length == 2) {
                 String target = strings[1];
@@ -187,7 +205,11 @@ public class createCMD extends Command {
                             if (!Loader.getInstance().isMember(Loader.getInstance().Player2Land(player), player)) {
                                 Player player1 = Server.getInstance().getPlayer(target);
                                 if (player1 != null) {
-                                    FormListener.inviteM(player1,player);
+                                    if (Loader.getInstance().canJoin(Loader.getInstance().Player2Land(player))) {
+                                        FormListener.inviteM(player1, player);
+                                    }else {
+                                        player.sendMessage("你的島嶼玩家已經超過最大限制 請升級島嶼進行擴充名額");
+                                    }
                                 } else {
                                     player.sendMessage(target + "找不到他");
                                 }
@@ -217,15 +239,18 @@ public class createCMD extends Command {
                         if (Loader.getInstance().hasLand(player)) {
                             Land land = Loader.getInstance().Player2Land(player);
                             switch (target) {
-                                case "day":
+                                case "day" -> {
                                     Server.getInstance().getLevelByName(land.getLevel()).setTime(Level.TIME_DAY);
                                     return true;
-                                case "noon":
+                                }
+                                case "noon" -> {
                                     Server.getInstance().getLevelByName(land.getLevel()).setTime(Level.TIME_NOON);
                                     return true;
-                                case "night":
+                                }
+                                case "night" -> {
                                     Server.getInstance().getLevelByName(land.getLevel()).setTime(Level.TIME_NIGHT);
                                     return true;
+                                }
                             }
                         }
                 }

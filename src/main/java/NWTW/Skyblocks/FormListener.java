@@ -8,16 +8,18 @@ import cn.nukkit.event.player.PlayerFormRespondedEvent;
 import cn.nukkit.form.element.ElementButton;
 import cn.nukkit.form.response.FormResponseSimple;
 import cn.nukkit.form.window.FormWindowSimple;
+import cn.nukkit.item.Item;
 import cn.nukkit.utils.TextFormat;
+import me.onebone.economyapi.EconomyAPI;
 import org.iq80.leveldb.util.FileUtils;
 
 import java.io.File;
-import java.util.Arrays;
 
 public class FormListener implements Listener {
     public static int memberle = -21315;
     public static int ownerle = -1241254;
     public static int inv = -548362;
+    public static int upgrade = -54834462;
     public static void memLeave(Player player){
         FormWindowSimple simple = new FormWindowSimple("島嶼系統","請問你是否要退出當前的島嶼");
         simple.addButton(new ElementButton("我已經非常確認了"));
@@ -35,6 +37,14 @@ public class FormListener implements Listener {
         simple.addButton(new ElementButton("我要加入島嶼並與他一起生活:"+send.getName()));
         simple.addButton(new ElementButton("我拒絕我才不要跟他再一起生活哩"));
         player.showFormWindow(simple,inv);
+    }
+    public static void UpgradeForm(Player player,Land land){
+    FormWindowSimple simple = new FormWindowSimple("島嶼升級系統","島嶼升級"+land.getSize()+"->"+(land.getSize()+1)+"\n物品:"+Loader.getInstance().getUpGradeHashMap().get(Loader.getInstance().int2String(land.getSize()+1)).getItems()+"\n"+"錢幣:"+Loader.getInstance().getUpGradeHashMap().get(Loader.getInstance().int2String(land.getSize()+1)).getMoney()
+    +"\n島嶼成員數:"+Loader.getInstance().getMember().get(Loader.getInstance().int2String(land.getSize()))+"->"+Loader.getInstance().getMember().get(Loader.getInstance().int2String(land.getSize()+1))
+    +"\n島嶼大小增加");
+        simple.addButton(new ElementButton("我已經確定要升級了"));
+        simple.addButton(new ElementButton("讓我在想想"));
+        player.showFormWindow(simple,upgrade);
     }
     @EventHandler
     public void onFormResponse(PlayerFormRespondedEvent event) {
@@ -78,7 +88,6 @@ public class FormListener implements Listener {
                     Loader.getInstance().dataBase.delLand(player);
                     player.teleport(Server.getInstance().getDefaultLevel().getSpawnLocation());
                     Loader.getInstance().getLands().remove(land);
-                    Loader.getInstance().getConfigs().remove(player.getName());
                 player.sendMessage("島嶼刪除成功");
 
             }
@@ -102,6 +111,29 @@ public class FormListener implements Listener {
                 if (player1!=null){
                     player1.sendMessage(player.getName()+"已經成功加入了你的島嶼");
                 }
+            }
+        }
+        if (id == upgrade){
+            FormResponseSimple response = (FormResponseSimple) event.getResponse(); //这里需要强制类型转换一下
+            int clickedButtonId = response.getClickedButtonId();
+            //分类别讨论
+            if (clickedButtonId == 0) {
+                if (EconomyAPI.getInstance().myMoney(player)<Loader.getInstance().getUpGradeHashMap().get(Loader.getInstance().int2String(Loader.getInstance().Player2Land(player).getSize()+1)).getMoney()) {
+                    player.sendMessage("你的錢幣不構請勿嘗試升級");
+                    return;
+                }
+                    for (Item item : Loader.getInstance().getUpGradeHashMap().get(Loader.getInstance().int2String(Loader.getInstance().Player2Land(player).getSize()+1)).getItems()){
+                    if (!player.getInventory().contains(item)){
+                        player.sendMessage("你的背包材料不夠升級喔");
+                        return;
+                    }
+                }
+                for (Item item : Loader.getInstance().getUpGradeHashMap().get(Loader.getInstance().int2String(Loader.getInstance().Player2Land(player).getSize()+1)).getItems()){
+                    player.getInventory().remove(item);
+                }
+                EconomyAPI.getInstance().reduceMoney(player,Loader.getInstance().getUpGradeHashMap().get(Loader.getInstance().int2String(Loader.getInstance().Player2Land(player).getSize()+1)).getMoney());
+                Loader.getInstance().Player2Land(player).setSize(Loader.getInstance().Player2Land(player).getSize()+1);
+                player.sendMessage("你的島嶼已經升級成功摟");
             }
         }
     }

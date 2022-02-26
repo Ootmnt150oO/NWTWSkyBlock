@@ -34,7 +34,7 @@ public class EmptyGenerator extends Generator {
     }
 
     public Vector3 getSpawn() {
-        return new Vector3(128.0D, 65.0D, 128.0D);
+        return new Vector3(128.0D, 70.0D, 128.0D);
     }
 
     public ChunkManager getChunkManager() {

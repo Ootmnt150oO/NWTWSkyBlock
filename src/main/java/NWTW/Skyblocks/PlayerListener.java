@@ -11,34 +11,37 @@ import cn.nukkit.event.entity.EntityDamageByEntityEvent;
 import cn.nukkit.event.entity.EntityDamageEvent;
 import cn.nukkit.event.player.PlayerInteractEvent;
 import cn.nukkit.event.player.PlayerRespawnEvent;
-import cn.nukkit.event.server.DataPacketReceiveEvent;
+
 
 
 public class PlayerListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onBreak(BlockBreakEvent event) {
-        if (Loader.getInstance().hasPer(event.getPlayer(), event.getBlock().getLevel(), event.getBlock())) {
-            Land land = Loader.getInstance().Level2Land(event.getPlayer().getLevel());
-            if (land != null) {
-                if (land.getSize() > 0)
-                    land.setSize(land.getSize() - 1);
-            }
-        } else {
+        if (!Loader.getInstance().hasPer(event.getPlayer(), event.getBlock().getLevel(), event.getBlock())) {
             event.setCancelled(true);
             event.getPlayer().sendMessage("你沒有此地圖編輯權限");
+        }else {
+            Land land = Loader.getInstance().Player2Land(event.getPlayer());
+            if (land == null) return;
+            if (!Loader.getInstance().isMineZone(land,event.getBlock())){
+                event.setCancelled(true);
+                event.getPlayer().sendMessage("請勿超出你的島嶼編輯範圍");
+            }
         }
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onPlace(BlockPlaceEvent event) {
-        if (Loader.getInstance().hasPer(event.getPlayer(), event.getBlock().getLevel(), event.getBlock())) {
-            Land land = Loader.getInstance().Level2Land(event.getPlayer().getLevel());
-            if (land != null) {
-                land.setSize(land.getSize() + 1);
-            }
-        }else {
+        if (!Loader.getInstance().hasPer(event.getPlayer(), event.getBlock().getLevel(), event.getBlock())) {
             event.getPlayer().sendMessage("你沒有此地圖編輯權限");
             event.setCancelled(true);
+        }else {
+            Land land = Loader.getInstance().Player2Land(event.getPlayer());
+            if (land == null) return;
+            if (!Loader.getInstance().isMineZone(land,event.getBlock())){
+                event.setCancelled(true);
+                event.getPlayer().sendMessage("請勿超出你的島嶼編輯範圍");
+            }
         }
     }
     @EventHandler(priority = EventPriority.LOWEST)
